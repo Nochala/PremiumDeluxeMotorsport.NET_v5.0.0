@@ -12,7 +12,7 @@ Requirements:
 ## [ **CHANGELOG** ]
 Release v5.0.0
 - Rewritten as a **"CS"** Project
-- Ported from INMNativeUi to LemonUI
+- Ported from **_INMNativeUi_** to **LemonUI** which is much stabler
 - Fixed ALL crashing
 - Updated to **ScriptHookVDotNet V3**
 -
