@@ -7,36 +7,13 @@ You can buy All cars and bikes except trucks, trailers, trains, planes, buses, h
 Requirements:
 - Latest ScriptHookV
 - Latest Community Script Hook V .NET
-
-Controls:
-
-Up - Menu Up
-
-Down - Menu Down 
-
-Enter/Return - Accept
-
-Esc/Backspace - Cancel
-
-1 - Vehicle Rotate Left
-
-2 - Vehicle Rotate Right
-
-3 - Open Vehicle Doors
-
-4 - Close Vehicle Doors
-
-E - Activate Menu
-
-F9 - Enable Mod
-
-To Edit the Controls, open 'config.ini' located in 'GTAV Root\Scripts\'
+- Latest LemonUI
 
 ## [ **CHANGELOG** ]
 Release v5.0.0
 - Rewritten as a **"CS"** Project
 - Ported from INMNativeUi to LemonUI
-- Fixed crashing on enhanced
+- Fixed crashing ALL crashing
 - Updated to **ScriptHookVDotNet V3**
 
 Credits:
