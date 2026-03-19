@@ -7,6 +7,7 @@ You can buy All cars and bikes except trucks, trailers, trains, planes, buses, h
 ### **This project is based on the original Premium Deluxe Motorsport mod created by ImNotMentaL.** 
 My version updates, rewrites, and fixes parts of the original mod, but full credit for the original concept and foundation goes to ImNotMentaL.
 
+**Compatible with both Legacy and Enhanced versions of GTA V.**
 ### Requirements:
 - Latest [**ScriptHookV**](https://www.dev-c.com/gtav/scripthookv/)
 - Latest **ScriptHookVDotNet v3** for [**Enhanced**](https://www.gta5-mods.com/tools/script-hook-v-net-enhanced) or [**Legacy**](https://www.gta5-mods.com/tools/scripthookv-net)
