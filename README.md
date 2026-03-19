@@ -1,4 +1,4 @@
-# PremiumDeluxeMotorsport.NET Enhanced
+# PremiumDeluxeMotorsport Revamped
 Premium Deluxe Motorsport Car Shop Mod for Grand Theft Auto V
 
 Features:
@@ -10,7 +10,10 @@ Requirements:
 - Latest [**LemonUI**](https://www.gta5-mods.com/tools/lemonui)
 
 ## [ **CHANGELOG** ]
-Release v5.0.0
+**Release v1.0.0**
+- Initial Release
+
+**General changes from original Premium Deluxe Motosport**
 - Rewrote all scripts and core functions
 - Fully migrated the project structure from **VB** scripts to **C#**
 - Replaced **INMNativeUI** with **LemonUI** for improved stability
