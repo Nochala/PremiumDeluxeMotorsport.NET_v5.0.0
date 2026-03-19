@@ -28,6 +28,7 @@ ___________________________________
 - Controller support
 - Sell vehicles at Premium Deluxe Motorsport
 - Function to search vehicles
+- Better Addon Vehicle Support
 
 ## [ **CHANGELOG** ]
 **Quick Fix v1.0.1**
