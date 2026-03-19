@@ -22,6 +22,7 @@ Release v5.0.0
 - 
 ### [ Planned Upcoming Features ]
 - Controller support
+- Sell vehicles at Premium Deluxe Motorsport
 
 ## Credits
 ### **This project is based on the original Premium Deluxe Motorsport mod created by ImNotMentaL.** 
