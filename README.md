@@ -1,6 +1,6 @@
 # PremiumDeluxeMotorsport Revamped
 [![Latest Release](https://img.shields.io/github/v/release/Nochala/PremiumDeluxeMotorsport_Revamped?include_prereleases&label=Version)](https://github.com/Nochala/PremiumDeluxeMotorsport_Revamped/releases/latest)
-
+![Language](https://img.shields.io/badge/LANGUAGE-C%23-239120?logo=csharp&logoColor=white)
 #### Premium Deluxe Motorsport Car Shop Mod for Grand Theft Auto V
 
 Features:
