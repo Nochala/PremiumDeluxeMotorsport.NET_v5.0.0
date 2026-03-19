@@ -9,11 +9,7 @@ Requirements:
 - Latest **ScriptHookVDotNet v3** for [**Enhanced**](https://www.gta5-mods.com/tools/script-hook-v-net-enhanced) or [**Legacy**](https://www.gta5-mods.com/tools/scripthookv-net)
 - Latest [**LemonUI**](https://www.gta5-mods.com/tools/lemonui)
 
-## [ **CHANGELOG** ]
-**Release v1.0.0**
-- Initial Release
-
-**General changes from original Premium Deluxe Motosport by** **ImNotMentaL:**
+### **General changes from original Premium Deluxe Motosport by** **ImNotMentaL:**
 - Rewrote all scripts and core functions
 - Fully migrated the project structure from **VB** scripts to **C#**
 - Replaced **INMNativeUI** with **LemonUI** for improved stability
@@ -23,11 +19,15 @@ Requirements:
 - Updated vehicle list for latest GTA V Updates
 - Overall stability has been greatly improved
 - Added mouse support for selecting UI options with the mouse
-  
+
 ### [ Planned Upcoming Features ]
 - Controller support
 - Sell vehicles at Premium Deluxe Motorsport
 
+## [ **CHANGELOG** ]
+**Release v1.0.0**
+- Initial Release
+  
 ## Credits
 ### **This project is based on the original Premium Deluxe Motorsport mod created by ImNotMentaL.** 
 My version updates, rewrites, and fixes parts of the original mod, but full credit for the original concept and foundation goes to ImNotMentaL.
