@@ -32,6 +32,8 @@ ___________________________________
 - Function to search vehicles
 - Better Addon Vehicle Support
 - Bring back the star system when first viewing a vehicle
+- Add an option to disable performance upgrades
+- Function to make performance upgrades increase the price of a vehicle
   
 ## [ **CHANGELOG** ]
 **Patch v1.0.2**
