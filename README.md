@@ -30,10 +30,8 @@ ___________________________________
 - Sell vehicles at Premium Deluxe Motorsport
 - Function to search vehicles
 - Better Addon Vehicle Support
-- Bring back the star system when first viewing a vehicle
 - Add an option to disable performance upgrades
 - Function to make performance upgrades increase the price of a vehicle
-- Function in vehicle viewer that shows vehicle top speed, acceleration, braking, & traction
   
 ## [ **CHANGELOG** ]
 **Patch v1.0.2**
