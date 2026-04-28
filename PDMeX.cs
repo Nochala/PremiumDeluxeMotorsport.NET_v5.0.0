@@ -1736,6 +1736,7 @@ namespace PremiumDeluxeRevamped
             MenuHelper.RefreshMouseBehaviors();
             MenuHelper.RefreshInstructionalButtons();
             MenuHelper._menuPool?.Process();
+            MenuHelper.RecoverHiddenMenuIfNeeded();
 
             if (Helper.HideHud)
             {

@@ -64,6 +64,9 @@ namespace PremiumDeluxeRevamped
         private static readonly List<NativeMenu> RegisteredMenus = new List<NativeMenu>();
         private static readonly Dictionary<NativeMenu, string> RegisteredMenuTitles = new Dictionary<NativeMenu, string>();
         private static bool suppressCloseHandlers;
+        private static NativeMenu lastVisibleMenu;
+        private static int lastVisibleMenuSeenAt;
+        private const int HiddenMenuRecoveryDelayMs = 150;
         private const string SelectionMarker = ">>";
         private static readonly Dictionary<NativeItem, string> PreservedSubmenuAltTitles = new Dictionary<NativeItem, string>();
         private const float ViewerSpawnCleanupSearchRadius = 6.0f;
@@ -854,7 +857,87 @@ namespace PremiumDeluxeRevamped
                     RestoreSubmenuAltTitles(menu);
                     menu.Visible = true;
                     ResetSelection(menu);
+                    lastVisibleMenu = menu;
+                    lastVisibleMenuSeenAt = Game.GameTime;
                 }
+            }
+            catch (Exception ex)
+            {
+                logger.Log(ex.Message + " " + ex.StackTrace);
+            }
+        }
+
+        private static bool ShouldRecoverHiddenMenu()
+        {
+            return Helper.TaskScriptStatus == 0
+                && Helper.TestDrive != 2
+                && Helper.TestDrive != 3
+                && !viewerActionInProgress
+                && Helper.GPC != null
+                && Helper.GPC.Exists()
+                && !Helper.GPC.IsDead;
+        }
+
+        private static NativeMenu GetHiddenMenuFallback(NativeMenu hiddenMenu)
+        {
+            if (hiddenMenu == null)
+            {
+                return Helper.SelectedVehicle != null && Helper.VehPreview != null && Helper.VehPreview.Exists()
+                    ? ConfirmMenu
+                    : MainMenu;
+            }
+
+            if (object.ReferenceEquals(hiddenMenu, MainMenu))
+            {
+                return null;
+            }
+
+            if (object.ReferenceEquals(hiddenMenu, VehicleMenu) || object.ReferenceEquals(hiddenMenu, ConfirmMenu))
+            {
+                return MainMenu;
+            }
+
+            NativeMenu parent = hiddenMenu.Parent;
+            if (parent != null && RegisteredMenus.Contains(parent))
+            {
+                return parent;
+            }
+
+            return Helper.SelectedVehicle != null && Helper.VehPreview != null && Helper.VehPreview.Exists()
+                ? ConfirmMenu
+                : MainMenu;
+        }
+
+        public static void RecoverHiddenMenuIfNeeded()
+        {
+            try
+            {
+                NativeMenu visibleMenu = GetVisibleMenu();
+                if (visibleMenu != null)
+                {
+                    lastVisibleMenu = visibleMenu;
+                    lastVisibleMenuSeenAt = Game.GameTime;
+                    return;
+                }
+
+                if (!ShouldRecoverHiddenMenu())
+                {
+                    return;
+                }
+
+                if (lastVisibleMenuSeenAt > 0 && Game.GameTime - lastVisibleMenuSeenAt < HiddenMenuRecoveryDelayMs)
+                {
+                    return;
+                }
+
+                NativeMenu fallbackMenu = GetHiddenMenuFallback(lastVisibleMenu);
+                if (fallbackMenu == null)
+                {
+                    MenuCloseHandler(lastVisibleMenu);
+                    return;
+                }
+
+                ShowOnly(fallbackMenu);
             }
             catch (Exception ex)
             {
