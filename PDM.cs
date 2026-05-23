@@ -40,6 +40,7 @@ namespace PremiumDeluxeRevamped
         private static int recentlyUsedPdmVehicleHandle;
         private static int recentlyUsedPdmVehicleUntil;
         private const int RecentlyUsedPdmVehicleGraceMs = 300000;
+        private const float SellZoneDrawRadius = 100.0f;
 
         public PDM()
         {
@@ -400,6 +401,25 @@ namespace PremiumDeluxeRevamped
             }
         }
 
+        private void DrawSellZoneMarker()
+        {
+            if (Helper.SellSpotDist > SellZoneDrawRadius) return;
+            if (pdmStoreClosedForCrime || pdmStoreClosedByClerkDeath) return;
+
+            Function.Call(
+                Hash.DRAW_MARKER,
+                1,
+                Helper.SellSpot.X,
+                Helper.SellSpot.Y,
+                Helper.SellSpot.Z - 1.0f,
+                0f, 0f, 0f,
+                0f, 0f, 0f,
+                6.0f, 6.0f, 1.5f,
+                Helper.optSellZoneColor.R, Helper.optSellZoneColor.G, Helper.optSellZoneColor.B, Helper.optSellZoneColor.A,
+                false, false, 2, false, 0, 0, false
+            );
+        }
+
         public void PDM_OnTick(object o, EventArgs e)
         {
             try
@@ -422,6 +442,9 @@ namespace PremiumDeluxeRevamped
                 Helper.SellSpotDist = World.GetDistance(Helper.GPC.Position, Helper.SellSpot);
                 HandlePdmCrimeState();
 
+                try { DrawSellZoneMarker(); }
+                catch (Exception ex) { logger.Log("Error DrawSellZoneMarker " + ex.Message + " " + ex.StackTrace); }
+                
                 try
                 {
                     if (Helper.PdmDoorDist < 10.0f && !pdmStoreClosedForCrime)
