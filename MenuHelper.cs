@@ -224,6 +224,42 @@ namespace PremiumDeluxeRevamped
             return Helper.VehiclePrice > 0 ? Helper.VehiclePrice : 0;
         }
 
+        public static bool TryResolveCatalogEntry(int modelHash, out int price, out string displayName)
+        {
+            price = 0;
+            displayName = null;
+            try
+            {
+                foreach (string file in System.IO.Directory.GetFiles(@".\scripts\PremiumDeluxeMotorsport\Vehicles\", "*.ini"))
+                {
+                    Reader format = new Reader(file, Parameters);
+                    for (int i = 0; i < format.Count; i++)
+                    {
+                        string modelName = format[i]["model"];
+                        Model model = new Model(modelName);
+                        if (!model.IsValid || model.Hash != modelHash)
+                        {
+                            continue;
+                        }
+
+                        if (!decimal.TryParse(format[i]["price"], out decimal parsedPrice))
+                        {
+                            continue;
+                        }
+
+                        price = (int)parsedPrice;
+                        displayName = format[i]["name"];
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Log("Error TryResolveCatalogEntry " + ex.Message + " " + ex.StackTrace);
+            }
+            return false;
+        }
+
         private static string LocalizedLicensePlate(LicensePlateStyle plateStyle)
         {
             switch (plateStyle)
