@@ -50,10 +50,11 @@ namespace PremiumDeluxeRevamped
         public static int Radius = 120, TestDrive = 1;
         public static string VehicleName = null;
         public static WorkshopCamera wsCamera = new WorkshopCamera();
-        public static Vector3 PdmDoor, PlayerLastPos;
+        public static Vector3 PdmDoor, PlayerLastPos, SellSpot;
         public static Ped GPC, pdmPed;
         public static Player GP;
         public static float PdmDoorDist;
+        public static float SellSpotDist;
         public static Interior poly = new Interior(), testDeivePoly = new Interior();
         public static string blipName = "NULL";
 

@@ -89,6 +89,8 @@ namespace PremiumDeluxeRevamped
             Helper.PdmBlip.Sprite = BlipSprite.SportsCar;
             Helper.PdmBlip.Color = BlipColor.RedLight;
             Helper.PdmBlip.IsShortRange = true;
+
+            Helper.SellSpot = new Vector3(-31.43404f, -1090.366f, 25.9985f);
         }
 
         private static Prop FindPdmChair()
@@ -417,6 +419,7 @@ namespace PremiumDeluxeRevamped
                 }
 
                 Helper.PdmDoorDist = World.GetDistance(Helper.GPC.Position, Helper.PdmDoor);
+                Helper.SellSpotDist = World.GetDistance(Helper.GPC.Position, Helper.SellSpot);
                 HandlePdmCrimeState();
 
                 try
