@@ -28,6 +28,12 @@ namespace PremiumDeluxeRevamped
         public static string optLastVehMake = null;
         public static bool optLogging = true;
         public static bool optEnableMouse = false;
+        public static int optSellPercent = 100;
+        public static bool optSellDamageScaling = true;
+        public static int optSellZoneColorR = 0;
+        public static int optSellZoneColorG = 200;
+        public static int optSellZoneColorB = 100;
+        public static int optSellZoneOpacity = 150;
         public static Control keyZoom = Control.NextCamera;
         public static Control keyDoor = Control.ParachuteBrakeLeft;
         public static Control keyRoof = Control.VehicleRoof;
@@ -77,6 +83,20 @@ namespace PremiumDeluxeRevamped
             keyDoor = config.GetValue("CONTROLS", "DOOR", Control.ParachuteBrakeLeft);
             keyRoof = config.GetValue("CONTROLS", "ROOF", Control.ParachuteBrakeRight);
             keyCamera = config.GetValue("CONTROLS", "CAMERA", Control.NextCamera);
+
+            optSellPercent = Clamp(config.GetValue("SELL", "SELL_PERCENT", 100), 0, 100);
+            optSellDamageScaling = config.GetValue("SELL", "SELL_DAMAGE_SCALING", true);
+            optSellZoneColorR = Clamp(config.GetValue("SELL", "ZONE_COLOR_R", 0), 0, 255);
+            optSellZoneColorG = Clamp(config.GetValue("SELL", "ZONE_COLOR_G", 200), 0, 255);
+            optSellZoneColorB = Clamp(config.GetValue("SELL", "ZONE_COLOR_B", 100), 0, 255);
+            optSellZoneOpacity = Clamp(config.GetValue("SELL", "ZONE_OPACITY", 150), 0, 255);
+        }
+        
+        private static int Clamp(int value, int min, int max)
+        {
+            if (value < min) return min;
+            if (value > min) return max;
+            return value;
         }
 
         private static string Gxt(string key) => Game.GetLocalizedString(key);
