@@ -40,7 +40,7 @@ namespace PremiumDeluxeRevamped
         private static int recentlyUsedPdmVehicleHandle;
         private static int recentlyUsedPdmVehicleUntil;
         private const int RecentlyUsedPdmVehicleGraceMs = 300000;
-        private const float SellZoneDrawRadius = 100.0f;
+        private const float SellZoneDrawRadius = 75.0f;
 
         public PDM()
         {
