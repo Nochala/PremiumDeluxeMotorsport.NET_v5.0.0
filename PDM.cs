@@ -629,7 +629,10 @@ namespace PremiumDeluxeRevamped
                 catch (Exception ex) { logger.Log("Error DrawSellZoneMarker " + ex.Message + " " + ex.StackTrace); }
                 
                 try { HandleSellZone(); }
-                catch (Exception ex) { logger.Log("Error HandleSellZone " + ex.Message + " " + ex.StackTrace); }
+                catch (Exception ex) {
+                    sellActionInProgress = false;
+                    logger.Log("Error HandleSellZone " + ex.Message + " " + ex.StackTrace);
+                }
 
                 try
                 {
