@@ -28,6 +28,7 @@ namespace PremiumDeluxeRevamped
         public static string optLastVehMake = null;
         public static bool optLogging = true;
         public static bool optEnableMouse = false;
+        // Sell-feature settings, loaded from [SELL] in config.ini at startup.
         public static int optSellPercent = 100;
         public static bool optSellDamageScaling = true;
         public static int optSellConditionFloor = 50;
@@ -61,6 +62,7 @@ namespace PremiumDeluxeRevamped
         public static Ped GPC, pdmPed;
         public static Player GP;
         public static float PdmDoorDist;
+        // Runtime sell-zone state, written by PDM.HandleSellZone and read by PDMeX.DrawSellHud.
         public static float SellSpotDist;
         public static bool SellHudVisible;
         public static int SellPriceQuote;

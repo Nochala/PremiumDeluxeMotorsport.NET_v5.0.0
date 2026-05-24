@@ -224,6 +224,7 @@ namespace PremiumDeluxeRevamped
             return Helper.VehiclePrice > 0 ? Helper.VehiclePrice : 0;
         }
 
+        // Scans Vehicles/*.ini for the model hash; outputs catalog price and display name
         public static bool TryResolveCatalogEntry(int modelHash, out int price, out string displayName)
         {
             price = 0;

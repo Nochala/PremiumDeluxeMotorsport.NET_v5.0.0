@@ -1731,6 +1731,7 @@ namespace PremiumDeluxeRevamped
             DrawVehicleStatRow("Traction", Helper.GetVehTraction(Helper.VehPreview), firstRowTop + (VehicleStatsRowSpacing * 3f), panelLeft);
         }
 
+        // Four-line right-aligned HUD shown while the player is in the sell zone.
         private static void DrawSellHud()
         {
             float safeZoneMargin = GetSafeZoneMargin();

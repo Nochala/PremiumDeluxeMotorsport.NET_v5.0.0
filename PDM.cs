@@ -407,6 +407,7 @@ namespace PremiumDeluxeRevamped
             }
         }
 
+        // Visible green corona on the ground at the sell spot. Hidden when the store is closed.
         private void DrawSellZoneMarker()
         {
             if (Helper.SellSpotDist > SellZoneDrawRadius) return;
@@ -426,6 +427,7 @@ namespace PremiumDeluxeRevamped
             );
         }
 
+        // Per-tick sell-zone state machine: gates, quote, HUD stash, input, prompt refresh.
         private void HandleSellZone()
         {
             if (sellActionInProgress) return;
@@ -449,6 +451,7 @@ namespace PremiumDeluxeRevamped
             Helper.SellVehicleName = displayName;
             Helper.SellVehicleClassName = vehicle.GetClassDisplayName();
 
+            // true = sale fired; ExecuteSellAction already cleared the prompt
             if (TryConsumeSellConfirmInput(vehicle, sellPrice, displayName))
             {
                 return;
@@ -458,6 +461,7 @@ namespace PremiumDeluxeRevamped
             RefreshSellPromptHelpText(actionLine, vehicle.Handle);
         }
 
+        // True only when the player is the driver of a vehicle and every sell-zone gate passes.
         private bool TryGetActiveSellVehicle(out Vehicle vehicle)
         {
             bool gatesOpen =
@@ -484,6 +488,7 @@ namespace PremiumDeluxeRevamped
             return true;
         }
 
+        // Two-step Context-key confirm. Returns true on the tick the sale fires.
         private bool TryConsumeSellConfirmInput(Vehicle vehicle, int sellPrice, string displayName)
         {
             int handle = vehicle.Handle;
@@ -508,6 +513,7 @@ namespace PremiumDeluxeRevamped
             return false;
         }
 
+        // Creates the prompt: "Press X to sell" or "Press X to confirm sale for $N".
         private static string BuildSellPromptText(int sellPrice)
         {
             if (sellConfirmPending)
@@ -524,6 +530,7 @@ namespace PremiumDeluxeRevamped
                 "Press ~INPUT_CONTEXT~ to sell.");
         }
 
+        // Re-issues the GTA help widget only when the text or vehicle handle changes.
         private void RefreshSellPromptHelpText(string actionLine, int handle)
         {
             bool needsRefresh = !sellPromptDisplayed
@@ -546,6 +553,7 @@ namespace PremiumDeluxeRevamped
             lastSellPromptText = actionLine;
         }
 
+        // Hides the help widget and clears the confirm state flags.
         private static void ClearSellPrompt()
         {
             if (!sellPromptDisplayed) return;
@@ -560,6 +568,7 @@ namespace PremiumDeluxeRevamped
             sellPromptForHandle = 0;
         }
 
+        // Catalog lookup, min-max-normalized condition, and damage-scaled sell price.
         private static bool ResolveSellQuote(Vehicle vehicle, out int sellPrice, out int originalPrice, out double conditionPct, out string displayName)
         {
             sellPrice = 0;
@@ -571,6 +580,7 @@ namespace PremiumDeluxeRevamped
             }
 
             float engineHealthFraction = Math.Max(0f, Math.Min(1f, vehicle.EngineHealth / 1000f));
+            // Engine health is renormalized so the floor maps to 0% and full health to 100%.
             float floor = Helper.optSellConditionFloor / 100f;
             float conditionFraction = (engineHealthFraction - floor) / (1f - floor);
             conditionFraction = Math.Max(0f, Math.Min(1f, conditionFraction));
@@ -583,6 +593,7 @@ namespace PremiumDeluxeRevamped
             return true;
         }
 
+        // Duplicate of MenuHelper.CleanMenuText; might merge later.
         private static string LangEntryOrDefault(string entry, string fallback)
         {
             return string.IsNullOrEmpty(entry) || string.Equals(entry, "NULL", StringComparison.OrdinalIgnoreCase)
@@ -590,6 +601,7 @@ namespace PremiumDeluxeRevamped
                 : entry;
         }
 
+        // Sale steps: fade out, eject player, pay, bump stat, delete car, sound, subtitle, fade back in.
         private void ExecuteSellAction(Vehicle vehicle, int sellPrice, string displayName)
         {
             sellActionInProgress = true;
@@ -635,6 +647,7 @@ namespace PremiumDeluxeRevamped
             }
         }
 
+        // Bumps SPx_TOTAL_CASH_EARNED for Michael/Franklin/Trevor; no-op for other peds.
         private static void BumpCashEarnedStat(int amount)
         {
             if (amount <= 0) return;
