@@ -430,6 +430,36 @@ namespace PremiumDeluxeRevamped
         {
             if (sellActionInProgress) return;
 
+            if (!TryGetActiveSellVehicle(out Vehicle vehicle))
+            {
+                ClearSellPrompt();
+                return;
+            }
+
+            if (!ResolveSellQuote(vehicle, out int sellPrice, out int originalPrice, out double conditionPct, out string displayName))
+            {
+                ClearSellPrompt();
+                return;
+            }
+
+            Helper.SellHudVisible = true;
+            Helper.SellPriceQuote = sellPrice;
+            Helper.SellOriginalPrice = originalPrice;
+            Helper.SellConditionPct = conditionPct;
+            Helper.SellVehicleName = displayName;
+            Helper.SellVehicleClassName = vehicle.GetClassDisplayName();
+
+            if (TryConsumeSellConfirmInput(vehicle, sellPrice, displayName))
+            {
+                return;
+            }
+
+            string actionLine = BuildSellPromptText(sellPrice);
+            RefreshSellPromptHelpText(actionLine, vehicle.Handle);
+        }
+
+        private bool TryGetActiveSellVehicle(out Vehicle vehicle)
+        {
             bool gatesOpen =
                 Helper.SellSpotDist < SellZoneRadius &&
                 Helper.GPC.Exists() &&
@@ -446,76 +476,74 @@ namespace PremiumDeluxeRevamped
 
             if (!gatesOpen || !isDriver)
             {
-                ClearSellPrompt();
-                return;
+                vehicle = null;
+                return false;
             }
 
-            if (!ResolveSellQuote(currentVehicle, out int sellPrice, out int originalPrice, out double conditionPct, out string displayName))
-            {
-                ClearSellPrompt();
-                return;
-            }
+            vehicle = currentVehicle;
+            return true;
+        }
 
-            Helper.SellHudVisible = true;
-            Helper.SellPriceQuote = sellPrice;
-            Helper.SellOriginalPrice = originalPrice;
-            Helper.SellConditionPct = conditionPct;
-            Helper.SellVehicleName = displayName;
-            Helper.SellVehicleClassName = currentVehicle.GetClassDisplayName();
-
-            int handle = currentVehicle.Handle;
+        private bool TryConsumeSellConfirmInput(Vehicle vehicle, int sellPrice, string displayName)
+        {
+            int handle = vehicle.Handle;
             if (sellPromptForHandle != 0 && sellPromptForHandle != handle)
             {
                 sellConfirmPending = false;
             }
 
-            if (Game.IsControlJustPressed(Control.Context))
+            if (!Game.IsControlJustPressed(Control.Context))
             {
-                if (sellConfirmPending)
-                {
-                    sellConfirmPending = false;
-                    ExecuteSellAction(currentVehicle, sellPrice, displayName);
-                    return;
-                }
-                sellConfirmPending = true;
+                return false;
             }
 
-            string actionLine;
             if (sellConfirmPending)
             {
-                string langConfirm = Helper.GetLangEntry("BTN_SELL_CONFIRM");
-                string confirmTemplate = string.IsNullOrEmpty(langConfirm) || string.Equals(langConfirm, "NULL", StringComparison.OrdinalIgnoreCase)
-                    ? "Press ~INPUT_CONTEXT~ to confirm sale for ${0}."
-                    : langConfirm;
-                actionLine = string.Format(confirmTemplate, sellPrice.ToString("N0"));
+                sellConfirmPending = false;
+                ExecuteSellAction(vehicle, sellPrice, displayName);
+                return true;
             }
-            else
+            
+            sellConfirmPending = true;
+            return false;
+        }
+
+        private static string BuildSellPromptText(int sellPrice)
+        {
+            if (sellConfirmPending)
             {
-                string langEntry = Helper.GetLangEntry("BTN_SELL_VEHICLE");
-                actionLine = string.IsNullOrEmpty(langEntry) || string.Equals(langEntry, "NULL", StringComparison.OrdinalIgnoreCase)
-                    ? "Press ~INPUT_CONTEXT~ to sell."
-                    : langEntry;
+                return string.Format(
+                    LangEntryOrDefault(
+                        Helper.GetLangEntry("BTN_SELL_CONFIRM"),
+                        "Press ~INPUT_CONTEXT~ to confirm sale for ${0}."),
+                    sellPrice.ToString("N0"));
             }
 
+            return LangEntryOrDefault(
+                Helper.GetLangEntry("BTN_SELL_VEHICLE"),
+                "Press ~INPUT_CONTEXT~ to sell.");
+        }
+
+        private void RefreshSellPromptHelpText(string actionLine, int handle)
+        {
             bool needsRefresh = !sellPromptDisplayed
                 || sellPromptForHandle != handle
                 || !string.Equals(lastSellPromptText, actionLine, StringComparison.Ordinal);
 
-            if (needsRefresh)
+            if (!needsRefresh) return;
+
+            if (sellPromptDisplayed)
             {
-                if (sellPromptDisplayed)
-                {
-                    try { Function.Call(Hash.CLEAR_HELP, false); } catch { }
-                }
-
-                Function.Call(Hash.BEGIN_TEXT_COMMAND_DISPLAY_HELP, "STRING");
-                Function.Call(Hash.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME, actionLine);
-                Function.Call(Hash.END_TEXT_COMMAND_DISPLAY_HELP, 0, true, false, -1);
-
-                sellPromptDisplayed = true;
-                sellPromptForHandle = handle;
-                lastSellPromptText = actionLine;
+                try { Function.Call(Hash.CLEAR_HELP, false); } catch { }
             }
+
+            Function.Call(Hash.BEGIN_TEXT_COMMAND_DISPLAY_HELP, "STRING");
+            Function.Call(Hash.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME, actionLine);
+            Function.Call(Hash.END_TEXT_COMMAND_DISPLAY_HELP, 0, true, false, -1);
+
+            sellPromptDisplayed = true;
+            sellPromptForHandle = handle;
+            lastSellPromptText = actionLine;
         }
 
         private static void ClearSellPrompt()
@@ -555,6 +583,13 @@ namespace PremiumDeluxeRevamped
             return true;
         }
 
+        private static string LangEntryOrDefault(string entry, string fallback)
+        {
+            return string.IsNullOrEmpty(entry) || string.Equals(entry, "NULL", StringComparison.OrdinalIgnoreCase)
+                ? fallback
+                : entry;
+        }
+
         private void ExecuteSellAction(Vehicle vehicle, int sellPrice, string displayName)
         {
             sellActionInProgress = true;
@@ -587,11 +622,7 @@ namespace PremiumDeluxeRevamped
 
                 Function.Call(Hash.PLAY_SOUND_FRONTEND, -1, "PROPERTY_PURCHASE", "HUD_AWARDS", false);
 
-                string soldLabel = Helper.GetLangEntry("VEHICLE_SOLD");
-                if (string.IsNullOrEmpty(soldLabel) || string.Equals(soldLabel, "NULL", StringComparison.OrdinalIgnoreCase))
-                {
-                    soldLabel = "Vehicle sold";
-                }
+                string soldLabel = LangEntryOrDefault(Helper.GetLangEntry("VEHICLE_SOLD"), "Vehicle sold");
                 string moneyLine = "$" + sellPrice.ToString("N0");
                 GtaScreen.ShowSubtitle("~y~" + soldLabel + "\n~w~" + displayName + " ~g~" + moneyLine, 4000);
 
