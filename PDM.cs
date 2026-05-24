@@ -41,6 +41,10 @@ namespace PremiumDeluxeRevamped
         private static int recentlyUsedPdmVehicleUntil;
         private const int RecentlyUsedPdmVehicleGraceMs = 300000;
         private const float SellZoneDrawRadius = 75.0f;
+        private const float SellZoneRadius = 5.0f;
+        private static bool sellPromptDisplayed;
+        private static int sellPromptForHandle;
+        private static string lastSellPromptText;
 
         public PDM()
         {
@@ -420,6 +424,101 @@ namespace PremiumDeluxeRevamped
             );
         }
 
+        private void HandleSellZone()
+        {
+            bool gatesOpen =
+                Helper.SellSpotDist < SellZoneRadius &&
+                Helper.GPC.Exists() &&
+                !Helper.GPC.IsDead &&
+                Helper.GPC.IsInVehicle() &&
+                Helper.GP.Wanted.WantedLevel == 0 &&
+                Helper.TaskScriptStatus == -1 &&
+                !pdmStoreClosedForCrime &&
+                !pdmStoreClosedByClerkDeath &&
+                !MenuHelper._menuPool.AreAnyVisible;
+
+            Vehicle currentVehicle = gatesOpen ? Helper.GPC.CurrentVehicle : null;
+            bool isDriver = currentVehicle != null && currentVehicle.Exists() && currentVehicle.Driver == Helper.GPC;
+
+            if (!gatesOpen || !isDriver)
+            {
+                ClearSellPrompt();
+                return;
+            }
+
+            if (!ResolveSellQuote(currentVehicle, out int sellPrice, out int originalPrice, out double conditionPct, out string displayName))
+            {
+                ClearSellPrompt();
+                return;
+            }
+
+            Helper.SellHudVisible = true;
+            Helper.SellPriceQuote = sellPrice;
+            Helper.SellOriginalPrice = originalPrice;
+            Helper.SellConditionPct = conditionPct;
+            Helper.SellVehicleName = displayName;
+            Helper.SellVehicleClassName = currentVehicle.GetClassDisplayName();
+
+            int handle = currentVehicle.Handle;
+            string langEntry = Helper.GetLangEntry("BTN_SELL_VEHICLE");
+            string actionLine = string.IsNullOrEmpty(langEntry) || string.Equals(langEntry, "NULL", StringComparison.OrdinalIgnoreCase)
+                ? "Press ~INPUT_CONTEXT~ to sell."
+                : langEntry;
+
+            bool needsRefresh = !sellPromptDisplayed
+                || sellPromptForHandle != handle
+                || !string.Equals(lastSellPromptText, actionLine, StringComparison.Ordinal);
+
+            if (needsRefresh)
+            {
+                if (sellPromptDisplayed)
+                {
+                    try { Function.Call(Hash.CLEAR_HELP, false); } catch { }
+                }
+
+                Function.Call(Hash.BEGIN_TEXT_COMMAND_DISPLAY_HELP, "STRING");
+                Function.Call(Hash.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME, actionLine);
+                Function.Call(Hash.END_TEXT_COMMAND_DISPLAY_HELP, 0, true, false, -1);
+
+                sellPromptDisplayed = true;
+                sellPromptForHandle = handle;
+                lastSellPromptText = actionLine;
+            }
+        }
+
+        private static void ClearSellPrompt()
+        {
+            if (!sellPromptDisplayed) return;
+
+            Helper.SellHudVisible = false;
+            lastSellPromptText = null;
+
+            try { Function.Call(Hash.CLEAR_HELP, false); } catch { }
+
+            sellPromptDisplayed = false;
+            sellPromptForHandle = 0;
+        }
+
+        private static bool ResolveSellQuote(Vehicle vehicle, out int sellPrice, out int originalPrice, out double conditionPct, out string displayName)
+        {
+            sellPrice = 0;
+            conditionPct = 0.0;
+
+            if (!MenuHelper.TryResolveCatalogEntry(vehicle.Model.Hash, out originalPrice, out displayName) || string.IsNullOrEmpty(displayName))
+            {
+                return false;
+            }
+
+            float engineHealthFraction = Math.Max(0f, Math.Min(1f, vehicle.EngineHealth / 1000f));
+            conditionPct = engineHealthFraction * 100.0;
+
+            double damageMultiplier = Helper.optSellDamageScaling ? engineHealthFraction : 1.0;
+            double computed = originalPrice * (Helper.optSellPercent / 100.0) * damageMultiplier;
+            sellPrice = (int)Math.Round(computed);
+
+            return true;
+        }
+
         public void PDM_OnTick(object o, EventArgs e)
         {
             try
@@ -445,6 +544,9 @@ namespace PremiumDeluxeRevamped
                 try { DrawSellZoneMarker(); }
                 catch (Exception ex) { logger.Log("Error DrawSellZoneMarker " + ex.Message + " " + ex.StackTrace); }
                 
+                try { HandleSellZone(); }
+                catch (Exception ex) { logger.Log("Error HandleSellZone " + ex.Message + " " + ex.StackTrace); }
+
                 try
                 {
                     if (Helper.PdmDoorDist < 10.0f && !pdmStoreClosedForCrime)

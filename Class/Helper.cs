@@ -61,6 +61,12 @@ namespace PremiumDeluxeRevamped
         public static Player GP;
         public static float PdmDoorDist;
         public static float SellSpotDist;
+        public static bool SellHudVisible;
+        public static int SellPriceQuote;
+        public static int SellOriginalPrice;
+        public static double SellConditionPct;
+        public static string SellVehicleName;
+        public static string SellVehicleClassName;
         public static Interior poly = new Interior(), testDeivePoly = new Interior();
         public static string blipName = "NULL";
 
