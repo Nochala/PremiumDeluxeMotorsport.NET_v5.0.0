@@ -579,6 +579,7 @@ namespace PremiumDeluxeRevamped
                 }
 
                 Helper.GP.Money = Helper.PlayerCash + sellPrice;
+                BumpCashEarnedStat(sellPrice);
 
                 try { vehicle.IsPersistent = false; } catch { }
                 try { vehicle.MarkAsNoLongerNeeded(); } catch { }
@@ -600,6 +601,39 @@ namespace PremiumDeluxeRevamped
             finally
             {
                 sellActionInProgress = false;
+            }
+        }
+
+        private static void BumpCashEarnedStat(int amount)
+        {
+            if (amount <= 0) return;
+
+            string statKey = null;
+            switch ((PedHash)Helper.GPC.Model.Hash)
+            {
+                case PedHash.Michael:
+                    statKey = "SP0_TOTAL_CASH_EARNED";
+                    break;
+                case PedHash.Franklin:
+                    statKey = "SP1_TOTAL_CASH_EARNED";
+                    break;
+                case PedHash.Trevor:
+                    statKey = "SP2_TOTAL_CASH_EARNED";
+                    break;
+            }
+
+            if (statKey == null) return;
+
+            try
+            {
+                int statHash = Function.Call<int>(Hash.GET_HASH_KEY, statKey);
+                OutputArgument current = new OutputArgument();
+                Function.Call(Hash.STAT_GET_INT, statHash, current, -1);
+                int previous = current.GetResult<int>();
+                Function.Call(Hash.STAT_SET_INT, statHash, previous + amount, true);
+            }
+            catch (Exception ex) {
+                logger.Log("Error BumpCashEarnedStat " + ex.Message + " " + ex.StackTrace);
             }
         }
 
