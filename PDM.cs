@@ -45,6 +45,7 @@ namespace PremiumDeluxeRevamped
         private static bool sellPromptDisplayed;
         private static int sellPromptForHandle;
         private static bool sellActionInProgress;
+        private static bool sellConfirmPending;
         private static string lastSellPromptText;
 
         public PDM()
@@ -462,17 +463,39 @@ namespace PremiumDeluxeRevamped
             Helper.SellVehicleName = displayName;
             Helper.SellVehicleClassName = currentVehicle.GetClassDisplayName();
 
-            if (Game.IsControlJustPressed(Control.Context))
+            int handle = currentVehicle.Handle;
+            if (sellPromptForHandle != 0 && sellPromptForHandle != handle)
             {
-                ExecuteSellAction(currentVehicle, sellPrice, displayName);
-                return;
+                sellConfirmPending = false;
             }
 
-            int handle = currentVehicle.Handle;
-            string langEntry = Helper.GetLangEntry("BTN_SELL_VEHICLE");
-            string actionLine = string.IsNullOrEmpty(langEntry) || string.Equals(langEntry, "NULL", StringComparison.OrdinalIgnoreCase)
-                ? "Press ~INPUT_CONTEXT~ to sell."
-                : langEntry;
+            if (Game.IsControlJustPressed(Control.Context))
+            {
+                if (sellConfirmPending)
+                {
+                    sellConfirmPending = false;
+                    ExecuteSellAction(currentVehicle, sellPrice, displayName);
+                    return;
+                }
+                sellConfirmPending = true;
+            }
+
+            string actionLine;
+            if (sellConfirmPending)
+            {
+                string langConfirm = Helper.GetLangEntry("BTN_SELL_CONFIRM");
+                string confirmTemplate = string.IsNullOrEmpty(langConfirm) || string.Equals(langConfirm, "NULL", StringComparison.OrdinalIgnoreCase)
+                    ? "Press ~INPUT_CONTEXT~ to confirm sale for ${0}."
+                    : langConfirm;
+                actionLine = string.Format(confirmTemplate, sellPrice.ToString("N0"));
+            }
+            else
+            {
+                string langEntry = Helper.GetLangEntry("BTN_SELL_VEHICLE");
+                actionLine = string.IsNullOrEmpty(langEntry) || string.Equals(langEntry, "NULL", StringComparison.OrdinalIgnoreCase)
+                    ? "Press ~INPUT_CONTEXT~ to sell."
+                    : langEntry;
+            }
 
             bool needsRefresh = !sellPromptDisplayed
                 || sellPromptForHandle != handle
@@ -500,6 +523,7 @@ namespace PremiumDeluxeRevamped
             if (!sellPromptDisplayed) return;
 
             Helper.SellHudVisible = false;
+            sellConfirmPending = false;
             lastSellPromptText = null;
 
             try { Function.Call(Hash.CLEAR_HELP, false); } catch { }
