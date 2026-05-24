@@ -565,7 +565,18 @@ namespace PremiumDeluxeRevamped
                 Wait(400);
 
                 try { Helper.GPC.Task.LeaveVehicle(vehicle, true); } catch { }
-                Wait(800);
+                
+                int leaveStart = Game.GameTime;
+                while (Helper.GPC.IsInVehicle(vehicle) && Game.GameTime - leaveStart < 1500)
+                {
+                    Wait(50);
+                }
+
+                if (Helper.GPC.IsInVehicle(vehicle))
+                {
+                    try { Helper.GPC.Task.ClearAllImmediately(); } catch { }
+                    try { Helper.GPC.Position = vehicle.Position + Vector3.WorldNorth * 1.5f + Vector3.WorldUp * 0.5f; } catch { }
+                }
 
                 Helper.GP.Money = Helper.PlayerCash + sellPrice;
 
