@@ -510,9 +510,12 @@ namespace PremiumDeluxeRevamped
             }
 
             float engineHealthFraction = Math.Max(0f, Math.Min(1f, vehicle.EngineHealth / 1000f));
-            conditionPct = engineHealthFraction * 100.0;
+            float floor = Helper.optSellConditionFloor / 100f;
+            float conditionFraction = (engineHealthFraction - floor) / (1f - floor);
+            conditionFraction = Math.Max(0f, Math.Min(1f, conditionFraction));
+            conditionPct = conditionFraction * 100.0;
 
-            double damageMultiplier = Helper.optSellDamageScaling ? engineHealthFraction : 1.0;
+            double damageMultiplier = Helper.optSellDamageScaling ? conditionFraction : 1.0;
             double computed = originalPrice * (Helper.optSellPercent / 100.0) * damageMultiplier;
             sellPrice = (int)Math.Round(computed);
 

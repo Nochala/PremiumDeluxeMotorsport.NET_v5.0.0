@@ -30,6 +30,7 @@ namespace PremiumDeluxeRevamped
         public static bool optEnableMouse = false;
         public static int optSellPercent = 100;
         public static bool optSellDamageScaling = true;
+        public static int optSellConditionFloor = 50;
         public static int optSellZoneColorR = 0;
         public static int optSellZoneColorG = 200;
         public static int optSellZoneColorB = 100;
@@ -92,6 +93,7 @@ namespace PremiumDeluxeRevamped
 
             optSellPercent = Clamp(config.GetValue("SELL", "SELL_PERCENT", 100), 0, 100);
             optSellDamageScaling = config.GetValue("SELL", "SELL_DAMAGE_SCALING", true);
+            optSellConditionFloor = Clamp(config.GetValue("SELL", "SELL_CONDITION_FLOOR", 50), 0, 99);
             optSellZoneColorR = Clamp(config.GetValue("SELL", "ZONE_COLOR_R", 0), 0, 255);
             optSellZoneColorG = Clamp(config.GetValue("SELL", "ZONE_COLOR_G", 200), 0, 255);
             optSellZoneColorB = Clamp(config.GetValue("SELL", "ZONE_COLOR_B", 100), 0, 255);
