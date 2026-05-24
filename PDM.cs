@@ -44,6 +44,7 @@ namespace PremiumDeluxeRevamped
         private const float SellZoneRadius = 5.0f;
         private static bool sellPromptDisplayed;
         private static int sellPromptForHandle;
+        private static bool sellActionInProgress;
         private static string lastSellPromptText;
 
         public PDM()
@@ -426,6 +427,8 @@ namespace PremiumDeluxeRevamped
 
         private void HandleSellZone()
         {
+            if (sellActionInProgress) return;
+
             bool gatesOpen =
                 Helper.SellSpotDist < SellZoneRadius &&
                 Helper.GPC.Exists() &&
@@ -458,6 +461,12 @@ namespace PremiumDeluxeRevamped
             Helper.SellConditionPct = conditionPct;
             Helper.SellVehicleName = displayName;
             Helper.SellVehicleClassName = currentVehicle.GetClassDisplayName();
+
+            if (Game.IsControlJustPressed(Control.Context))
+            {
+                ExecuteSellAction(currentVehicle, sellPrice, displayName);
+                return;
+            }
 
             int handle = currentVehicle.Handle;
             string langEntry = Helper.GetLangEntry("BTN_SELL_VEHICLE");
@@ -520,6 +529,43 @@ namespace PremiumDeluxeRevamped
             sellPrice = (int)Math.Round(computed);
 
             return true;
+        }
+
+        private void ExecuteSellAction(Vehicle vehicle, int sellPrice, string displayName)
+        {
+            sellActionInProgress = true;
+            try
+            {
+                ClearSellPrompt();
+                GtaScreen.FadeOut(400);
+                Wait(400);
+
+                try { Helper.GPC.Task.LeaveVehicle(vehicle, true); } catch { }
+                Wait(800);
+
+                Helper.GP.Money = Helper.PlayerCash + sellPrice;
+
+                try { vehicle.IsPersistent = false; } catch { }
+                try { vehicle.MarkAsNoLongerNeeded(); } catch { }
+                try { vehicle.Delete(); } catch { }
+
+                Function.Call(Hash.PLAY_SOUND_FRONTEND, -1, "PROPERTY_PURCHASE", "HUD_AWARDS", false);
+
+                string soldLabel = Helper.GetLangEntry("VEHICLE_SOLD");
+                if (string.IsNullOrEmpty(soldLabel) || string.Equals(soldLabel, "NULL", StringComparison.OrdinalIgnoreCase))
+                {
+                    soldLabel = "Vehicle sold";
+                }
+                string moneyLine = "$" + sellPrice.ToString("N0");
+                GtaScreen.ShowSubtitle("~y~" + soldLabel + "\n~w~" + displayName + " ~g~" + moneyLine, 4000);
+
+                Wait(200);
+                GtaScreen.FadeIn(400);
+            }
+            finally
+            {
+                sellActionInProgress = false;
+            }
         }
 
         public void PDM_OnTick(object o, EventArgs e)
