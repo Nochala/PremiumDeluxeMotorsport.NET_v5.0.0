@@ -1731,6 +1731,50 @@ namespace PremiumDeluxeRevamped
             DrawVehicleStatRow("Traction", Helper.GetVehTraction(Helper.VehPreview), firstRowTop + (VehicleStatsRowSpacing * 3f), panelLeft);
         }
 
+        // Four-line right-aligned HUD shown while the player is in the sell zone.
+        private static void DrawSellHud()
+        {
+            float safeZoneMargin = GetSafeZoneMargin();
+            float rightX = 0.999f - safeZoneMargin;
+            float topY = 0.010f + (safeZoneMargin * 0.30f);
+            float lineSpacing = 0.030f;
+            const float LineScale = 0.47f;
+
+            string cashText      =  "$" + Helper.PlayerCash.ToString("N0");
+            string sellPriceText = "+$" + Helper.SellPriceQuote.ToString("N0");
+            string origPriceText =  "$" + Helper.SellOriginalPrice.ToString("N0");
+            string conditionText = Helper.SellConditionPct.ToString("F2") + "%";
+
+            DrawTextNormalized(cashText, rightX, topY, LineScale, GTA.UI.Font.Pricedown, Color.White, true);
+            DrawTextNormalized(sellPriceText, rightX, topY + lineSpacing, LineScale, GTA.UI.Font.Pricedown, Color.LightGreen, true);
+            DrawTextNormalized(origPriceText, rightX, topY + (lineSpacing * 2f), LineScale, GTA.UI.Font.Pricedown, Color.White, true);
+            DrawTextNormalized(conditionText, rightX, topY + (lineSpacing * 3f), LineScale, GTA.UI.Font.Pricedown, Color.White, true);
+
+            if (!string.IsNullOrEmpty(Helper.SellVehicleName))
+            {
+                float nameRightX = 0.995f - safeZoneMargin;
+                float classY = 0.928f - safeZoneMargin;
+                float nameY = classY - 0.040f;
+
+                GTA.UI.Font titleFont = GTA.UI.Font.ChaletComprimeCologne;
+                switch (Game.Language.ToString())
+                {
+                    case "Chinese":
+                    case "Korean":
+                    case "Japanese":
+                    case "ChineseSimplified":
+                        titleFont = GTA.UI.Font.ChaletLondon;
+                        break;
+                }
+
+                DrawTextNormalized(Helper.SellVehicleName, nameRightX, nameY, 0.64f, titleFont, Color.White, true);
+                if (!string.IsNullOrEmpty(Helper.SellVehicleClassName))
+                {
+                    DrawTextNormalized(Helper.SellVehicleClassName, nameRightX, classY, 0.40f, GTA.UI.Font.ChaletLondon, Color.DodgerBlue, true);
+                }
+            }
+        }
+
         private void PDMeX_Tick(object sender, EventArgs e)
         {
             MenuHelper.RefreshMouseBehaviors();
@@ -1781,6 +1825,11 @@ namespace PremiumDeluxeRevamped
                     DrawTextNormalized(Helper.VehicleName, rightX, nameY, 0.64f, titleFont, Color.White, true);
                     DrawTextNormalized(Helper.VehPreview.GetClassDisplayName(), rightX, classY, 0.40f, GTA.UI.Font.ChaletLondon, Color.DodgerBlue, true);
                 }
+            }
+            else if (Helper.SellHudVisible)
+            {
+                Function.Call(Hash.HIDE_HUD_AND_RADAR_THIS_FRAME, 3);
+                DrawSellHud();
             }
         }
     }

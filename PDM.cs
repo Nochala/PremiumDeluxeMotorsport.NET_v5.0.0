@@ -41,6 +41,13 @@ namespace PremiumDeluxeRevamped
         private static int recentlyUsedPdmVehicleHandle;
         private static int recentlyUsedPdmVehicleUntil;
         private const int RecentlyUsedPdmVehicleGraceMs = 300000;
+        private const float SellZoneDrawRadius = 75.0f;
+        private const float SellZoneRadius = 5.0f;
+        private static bool sellPromptDisplayed;
+        private static int sellPromptForHandle;
+        private static bool sellActionInProgress;
+        private static bool sellConfirmPending;
+        private static string lastSellPromptText;
 
         // Helper to safely call Notification.PostTicker; falls back to Screen.ShowSubtitle on Nightly
         private static void SafePostTicker(string message, bool flash)
@@ -111,6 +118,8 @@ namespace PremiumDeluxeRevamped
             Helper.PdmBlip.Sprite = BlipSprite.SportsCar;
             Helper.PdmBlip.Color = BlipColor.RedLight;
             Helper.PdmBlip.IsShortRange = true;
+
+            Helper.SellSpot = new Vector3(-31.43404f, -1090.366f, 25.9985f);
         }
 
         private static Prop FindPdmChair()
@@ -420,6 +429,280 @@ namespace PremiumDeluxeRevamped
             }
         }
 
+        // Visible green corona on the ground at the sell spot. Hidden when the store is closed.
+        private void DrawSellZoneMarker()
+        {
+            if (Helper.SellSpotDist > SellZoneDrawRadius) return;
+            if (pdmStoreClosedForCrime || pdmStoreClosedByClerkDeath) return;
+
+            Function.Call(
+                Hash.DRAW_MARKER,
+                1,
+                Helper.SellSpot.X,
+                Helper.SellSpot.Y,
+                Helper.SellSpot.Z - 1.0f,
+                0f, 0f, 0f,
+                0f, 0f, 0f,
+                6.0f, 6.0f, 1.5f,
+                Helper.optSellZoneColor.R, Helper.optSellZoneColor.G, Helper.optSellZoneColor.B, Helper.optSellZoneColor.A,
+                false, false, 2, false, 0, 0, false
+            );
+        }
+
+        // Per-tick sell-zone state machine: gates, quote, HUD stash, input, prompt refresh.
+        private void HandleSellZone()
+        {
+            if (sellActionInProgress) return;
+
+            if (!TryGetActiveSellVehicle(out Vehicle vehicle))
+            {
+                ClearSellPrompt();
+                return;
+            }
+
+            if (!ResolveSellQuote(vehicle, out int sellPrice, out int originalPrice, out double conditionPct, out string displayName))
+            {
+                ClearSellPrompt();
+                return;
+            }
+
+            Helper.SellHudVisible = true;
+            Helper.SellPriceQuote = sellPrice;
+            Helper.SellOriginalPrice = originalPrice;
+            Helper.SellConditionPct = conditionPct;
+            Helper.SellVehicleName = displayName;
+            Helper.SellVehicleClassName = vehicle.GetClassDisplayName();
+
+            // true = sale fired; ExecuteSellAction already cleared the prompt
+            if (TryConsumeSellConfirmInput(vehicle, sellPrice, displayName))
+            {
+                return;
+            }
+
+            string actionLine = BuildSellPromptText(sellPrice);
+            RefreshSellPromptHelpText(actionLine, vehicle.Handle);
+        }
+
+        // True only when the player is the driver of a vehicle and every sell-zone gate passes.
+        private bool TryGetActiveSellVehicle(out Vehicle vehicle)
+        {
+            bool gatesOpen =
+                Helper.SellSpotDist < SellZoneRadius &&
+                Helper.GPC.Exists() &&
+                !Helper.GPC.IsDead &&
+                Helper.GPC.IsInVehicle() &&
+                Helper.GP.Wanted.WantedLevel == 0 &&
+                Helper.TaskScriptStatus == -1 &&
+                !pdmStoreClosedForCrime &&
+                !pdmStoreClosedByClerkDeath &&
+                !MenuHelper._menuPool.AreAnyVisible;
+
+            Vehicle currentVehicle = gatesOpen ? Helper.GPC.CurrentVehicle : null;
+            bool isDriver = currentVehicle != null && currentVehicle.Exists() && currentVehicle.Driver == Helper.GPC;
+
+            if (!gatesOpen || !isDriver)
+            {
+                vehicle = null;
+                return false;
+            }
+
+            vehicle = currentVehicle;
+            return true;
+        }
+
+        // Two-step Context-key confirm. Returns true on the tick the sale fires.
+        private bool TryConsumeSellConfirmInput(Vehicle vehicle, int sellPrice, string displayName)
+        {
+            int handle = vehicle.Handle;
+            if (sellPromptForHandle != 0 && sellPromptForHandle != handle)
+            {
+                sellConfirmPending = false;
+            }
+
+            if (!Game.IsControlJustPressed(Control.Context))
+            {
+                return false;
+            }
+
+            if (sellConfirmPending)
+            {
+                sellConfirmPending = false;
+                ExecuteSellAction(vehicle, sellPrice, displayName);
+                return true;
+            }
+            
+            sellConfirmPending = true;
+            return false;
+        }
+
+        // Creates the prompt: "Press X to sell" or "Press X to confirm sale for $N".
+        private static string BuildSellPromptText(int sellPrice)
+        {
+            if (sellConfirmPending)
+            {
+                return string.Format(
+                    LangEntryOrDefault(
+                        Helper.GetLangEntry("BTN_SELL_CONFIRM"),
+                        "Press ~INPUT_CONTEXT~ to confirm sale for ${0}."),
+                    sellPrice.ToString("N0"));
+            }
+
+            return LangEntryOrDefault(
+                Helper.GetLangEntry("BTN_SELL_VEHICLE"),
+                "Press ~INPUT_CONTEXT~ to sell.");
+        }
+
+        // Re-issues the GTA help widget only when the text or vehicle handle changes.
+        private void RefreshSellPromptHelpText(string actionLine, int handle)
+        {
+            bool needsRefresh = !sellPromptDisplayed
+                || sellPromptForHandle != handle
+                || !string.Equals(lastSellPromptText, actionLine, StringComparison.Ordinal);
+
+            if (!needsRefresh) return;
+
+            if (sellPromptDisplayed)
+            {
+                try { Function.Call(Hash.CLEAR_HELP, false); } catch { }
+            }
+
+            Function.Call(Hash.BEGIN_TEXT_COMMAND_DISPLAY_HELP, "STRING");
+            Function.Call(Hash.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME, actionLine);
+            Function.Call(Hash.END_TEXT_COMMAND_DISPLAY_HELP, 0, true, false, -1);
+
+            sellPromptDisplayed = true;
+            sellPromptForHandle = handle;
+            lastSellPromptText = actionLine;
+        }
+
+        // Hides the help widget and clears the confirm state flags.
+        private static void ClearSellPrompt()
+        {
+            if (!sellPromptDisplayed) return;
+
+            Helper.SellHudVisible = false;
+            sellConfirmPending = false;
+            lastSellPromptText = null;
+
+            try { Function.Call(Hash.CLEAR_HELP, false); } catch { }
+
+            sellPromptDisplayed = false;
+            sellPromptForHandle = 0;
+        }
+
+        // Catalog lookup, min-max-normalized condition, and damage-scaled sell price.
+        private static bool ResolveSellQuote(Vehicle vehicle, out int sellPrice, out int originalPrice, out double conditionPct, out string displayName)
+        {
+            sellPrice = 0;
+            conditionPct = 0.0;
+
+            if (!MenuHelper.TryResolveCatalogEntry(vehicle.Model.Hash, out originalPrice, out displayName) || string.IsNullOrEmpty(displayName))
+            {
+                return false;
+            }
+
+            float engineHealthFraction = Math.Max(0f, Math.Min(1f, vehicle.EngineHealth / 1000f));
+            // Engine health is renormalized so the floor maps to 0% and full health to 100%.
+            float floor = Helper.optSellConditionFloor / 100f;
+            float conditionFraction = (engineHealthFraction - floor) / (1f - floor);
+            conditionFraction = Math.Max(0f, Math.Min(1f, conditionFraction));
+            conditionPct = conditionFraction * 100.0;
+
+            double damageMultiplier = Helper.optSellDamageScaling ? conditionFraction : 1.0;
+            double computed = originalPrice * (Helper.optSellPercent / 100.0) * damageMultiplier;
+            sellPrice = (int)Math.Round(computed);
+
+            return true;
+        }
+
+        // Duplicate of MenuHelper.CleanMenuText; might merge later.
+        private static string LangEntryOrDefault(string entry, string fallback)
+        {
+            return string.IsNullOrEmpty(entry) || string.Equals(entry, "NULL", StringComparison.OrdinalIgnoreCase)
+                ? fallback
+                : entry;
+        }
+
+        // Sale steps: fade out, eject player, pay, bump stat, delete car, sound, subtitle, fade back in.
+        private void ExecuteSellAction(Vehicle vehicle, int sellPrice, string displayName)
+        {
+            sellActionInProgress = true;
+            try
+            {
+                ClearSellPrompt();
+                GtaScreen.FadeOut(400);
+                Wait(400);
+
+                try { Helper.GPC.Task.LeaveVehicle(vehicle, true); } catch { }
+                
+                int leaveStart = Game.GameTime;
+                while (Helper.GPC.IsInVehicle(vehicle) && Game.GameTime - leaveStart < 1500)
+                {
+                    Wait(50);
+                }
+
+                if (Helper.GPC.IsInVehicle(vehicle))
+                {
+                    try { Helper.GPC.Task.ClearAllImmediately(); } catch { }
+                    try { Helper.GPC.Position = vehicle.Position + Vector3.WorldNorth * 1.5f + Vector3.WorldUp * 0.5f; } catch { }
+                }
+
+                Helper.GP.Money = Helper.PlayerCash + sellPrice;
+                BumpCashEarnedStat(sellPrice);
+
+                try { vehicle.IsPersistent = false; } catch { }
+                try { vehicle.MarkAsNoLongerNeeded(); } catch { }
+                try { vehicle.Delete(); } catch { }
+
+                Function.Call(Hash.PLAY_SOUND_FRONTEND, -1, "PROPERTY_PURCHASE", "HUD_AWARDS", false);
+
+                string soldLabel = LangEntryOrDefault(Helper.GetLangEntry("VEHICLE_SOLD"), "Vehicle sold");
+                string moneyLine = "$" + sellPrice.ToString("N0");
+                GtaScreen.ShowSubtitle("~y~" + soldLabel + "\n~w~" + displayName + " ~g~" + moneyLine, 4000);
+
+                Wait(200);
+                GtaScreen.FadeIn(400);
+            }
+            finally
+            {
+                sellActionInProgress = false;
+            }
+        }
+
+        // Bumps SPx_TOTAL_CASH_EARNED for Michael/Franklin/Trevor; no-op for other peds.
+        private static void BumpCashEarnedStat(int amount)
+        {
+            if (amount <= 0) return;
+
+            string statKey = null;
+            switch ((PedHash)Helper.GPC.Model.Hash)
+            {
+                case PedHash.Michael:
+                    statKey = "SP0_TOTAL_CASH_EARNED";
+                    break;
+                case PedHash.Franklin:
+                    statKey = "SP1_TOTAL_CASH_EARNED";
+                    break;
+                case PedHash.Trevor:
+                    statKey = "SP2_TOTAL_CASH_EARNED";
+                    break;
+            }
+
+            if (statKey == null) return;
+
+            try
+            {
+                int statHash = Function.Call<int>(Hash.GET_HASH_KEY, statKey);
+                OutputArgument current = new OutputArgument();
+                Function.Call(Hash.STAT_GET_INT, statHash, current, -1);
+                int previous = current.GetResult<int>();
+                Function.Call(Hash.STAT_SET_INT, statHash, previous + amount, true);
+            }
+            catch (Exception ex) {
+                logger.Log("Error BumpCashEarnedStat " + ex.Message + " " + ex.StackTrace);
+            }
+        }
+
         public void PDM_OnTick(object o, EventArgs e)
         {
             try
@@ -439,7 +722,17 @@ namespace PremiumDeluxeRevamped
                 }
 
                 Helper.PdmDoorDist = World.GetDistance(Helper.GPC.Position, Helper.PdmDoor);
+                Helper.SellSpotDist = World.GetDistance(Helper.GPC.Position, Helper.SellSpot);
                 HandlePdmCrimeState();
+
+                try { DrawSellZoneMarker(); }
+                catch (Exception ex) { logger.Log("Error DrawSellZoneMarker " + ex.Message + " " + ex.StackTrace); }
+                
+                try { HandleSellZone(); }
+                catch (Exception ex) {
+                    sellActionInProgress = false;
+                    logger.Log("Error HandleSellZone " + ex.Message + " " + ex.StackTrace);
+                }
 
                 try
                 {
