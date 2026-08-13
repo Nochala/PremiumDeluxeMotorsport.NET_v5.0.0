@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Reflection;
 using GTA;
 using GTA.Math;
 using GTA.Native;
@@ -40,6 +41,27 @@ namespace PremiumDeluxeRevamped
         private static int recentlyUsedPdmVehicleHandle;
         private static int recentlyUsedPdmVehicleUntil;
         private const int RecentlyUsedPdmVehicleGraceMs = 300000;
+
+        // Helper to safely call Notification.PostTicker; falls back to Screen.ShowSubtitle on Nightly
+        private static void SafePostTicker(string message, bool flash)
+        {
+            try
+            {
+                var method = typeof(Notification).GetMethod("PostTicker", new Type[] { typeof(string), typeof(bool) });
+                if (method != null)
+                {
+                    method.Invoke(null, new object[] { message, flash });
+                    return;
+                }
+            }
+            catch
+            {
+                // Reflection failed; fall through to subtitle
+            }
+
+            // Fallback for SHVDN Nightly or any other failure
+            GtaScreen.ShowSubtitle(message, 3000);
+        }
 
         public PDM()
         {
@@ -326,12 +348,12 @@ namespace PremiumDeluxeRevamped
                 MarkRecentlyUsedPdmVehicleHandle(playerVehicleHandleLastTick, RecentlyUsedPdmVehicleGraceMs);
             }
 
-            if (Helper.pdmPed != null && Helper.pdmPed.Exists() && Helper.pdmPed.IsDead && !pdmStoreClosedForCrime)
+            if (Helper.pdmPed != null && Helper.pdmPed.Exists() && Helper.pdmPed.IsDead && !pdmStoreClosedForCrime && !Game.IsMissionActive)
             {
                 EnsurePlayerWantedLevelAtLeast(PdmStoreCrimeWantedLevel);
                 CloseStoreForCrime(true);
             }
-            else if (!pdmStoreClosedForCrime && playerInsidePdm && playerInVehicle && playerWasInsidePdmLastTick && !playerWasInVehicleLastTick && Helper.TestDrive != 2 && Helper.TestDrive != 3)
+            else if (!pdmStoreClosedForCrime && playerInsidePdm && playerInVehicle && playerWasInsidePdmLastTick && !playerWasInVehicleLastTick && Helper.TestDrive != 2 && Helper.TestDrive != 3 && !Game.IsMissionActive)
             {
                 if (!MenuHelper.IsLegitimatePdmVehicle(currentVehicle) && !IsRecentlyUsedPdmVehicle(currentVehicle))
                 {
@@ -486,7 +508,7 @@ namespace PremiumDeluxeRevamped
                     if (Helper.VehPreview.HasBeenDamagedBy(Helper.GPC))
                     {
                         Helper.GP.Money = Helper.PlayerCash - (Helper.VehiclePrice / 99);
-                        Notification.PostTicker("$" + Math.Round(penalty).ToString("###,###") + Helper.GetLangEntry("HELP_PENALTY"), false);
+                        SafePostTicker("$" + Math.Round(penalty).ToString("###,###") + Helper.GetLangEntry("HELP_PENALTY"), false);
                     }
 
                     MenuHelper.ShowOnly(MenuHelper.ConfirmMenu);
