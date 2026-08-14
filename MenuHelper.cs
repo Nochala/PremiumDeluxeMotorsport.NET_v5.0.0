@@ -1065,6 +1065,8 @@ namespace PremiumDeluxeRevamped
                 ResetSelection(CustomiseMenu);
                 ResetSelection(ConfirmMenu);
                 ResetSelection(MainMenu);
+                lastVisibleMenu = null;
+                lastVisibleMenuSeenAt = 0;
             }
             catch (Exception ex)
             {
@@ -1284,10 +1286,12 @@ namespace PremiumDeluxeRevamped
                 {
                     return;
                 }
+
                 Helper.SelectedVehicle = t.Item3;
                 CleanupVehicleViewerArea();
                 Helper.VehPreview?.Delete();
                 if (sender.Items[index].Title.IndexOf("NULL", StringComparison.OrdinalIgnoreCase) < 0)
+                 
                 {
                     if (Helper.optFade)
                     {
@@ -1302,6 +1306,7 @@ namespace PremiumDeluxeRevamped
                         Helper.VehPreview = Helper.CreateVehicle(t.Item1, Helper.VehPreviewPos, Helper.Radius);
                     }
                 }
+
                 if (Helper.optRandomColor && Helper.VehPreview != null)
                 {
                     Random r = new Random();
@@ -1314,15 +1319,9 @@ namespace PremiumDeluxeRevamped
                     Mods(Helper.VehPreview).RimColor = (VehicleColor)r.Next(0, 160);
                 }
                 Helper.UpdateVehPreview();
-                Helper.VehicleName = t.Item3;
-                Helper.optLastVehMake = t.Item4;
-                Helper.ShowVehicleName = true;
-                Helper.VehPreview.Heading = Helper.Radius;
                 Helper.VehPreview.IsUndriveable = true;
                 Helper.VehPreview.LockStatus = VehicleLockStatus.IgnoredByPlayer;
                 Helper.VehPreview.DirtLevel = 0f;
-                PreviewVehicleBasePrice = t.Item2;
-                Helper.VehiclePrice = PreviewVehicleBasePrice;
                 UpdatePerformanceUpgradeItemState();
                 Helper.wsCamera.RepositionFor(Helper.VehPreview);
                 Helper.optLastVehHash = Helper.VehPreview.Model.Hash;
@@ -1336,7 +1335,6 @@ namespace PremiumDeluxeRevamped
                     Helper.hiddenSave.SetValue("VEHICLES", Helper.VehPreview.Model.Hash.ToString(), 1);
                     Helper.hiddenSave.Save();
                 }
-
             }
             catch (Exception ex)
             {
