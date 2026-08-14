@@ -129,20 +129,23 @@ namespace PremiumDeluxeRevamped
         public void RepositionFor(Vehicle lowrider)
         {
             if (lowrider == null)
-            {
                 return;
-            }
 
             Camera.DeleteAllCameras();
+
+            float camHeight = 0.3f;   // lower default
+            float targetHeight = 0.0f; // lower default
+
             _mainCamera = CreateScriptedCamera(
-                lowrider.Position - lowrider.ForwardVector * 5.0f + new Vector3(0f, 0f, 1.5f),
+                lowrider.Position - lowrider.ForwardVector * 5.0f + new Vector3(0f, 0f, camHeight),
                 CutsceneManager.DirectionToRotation(lowrider.ForwardVector * -5.0f),
                 GameplayCamera.FieldOfView);
 
             _target = lowrider;
-            _targetPos = new Vector3(lowrider.Position.X, lowrider.Position.Y, Helper.VehPreviewPos.Z + 0.6f);
+            _targetPos = new Vector3(lowrider.Position.X, lowrider.Position.Y, lowrider.Position.Z + targetHeight);
             _mainCamera.PointAt(_targetPos);
 
+            // Restore saved pose if valid
             if (IsValidStoredCameraPose(lowrider, Helper.CameraPos, Helper.CameraRot))
             {
                 _mainCamera.Position = Helper.CameraPos;
@@ -718,20 +721,30 @@ namespace PremiumDeluxeRevamped
                 case CameraPosition.Car:
                     Game.Player.Character.Opacity = 255;
                     RotationMode = CameraRotationMode.Around;
-                    if (_internalCameraPosition != CameraPosition.Car && _internalCameraPosition != CameraPosition.Interior)
+
+                    if (_internalCameraPosition != CameraPosition.Interior)
                     {
-                        _targetPos = new Vector3(_target.Position.X, _target.Position.Y, Helper.VehPreviewPos.Z + 0.6f);
-                        _mainCamera.PointAt(_targetPos);
+
+                        Vector3 lowTarget = _target.Position + new Vector3(0f, 0f, 0.0f);
+                        float camHeight = 0.3f;
+                        Vector3 lowCamPos = lowTarget - _target.ForwardVector * 5.0f + new Vector3(0f, 0f, camHeight);
+
+                        _targetPos = lowTarget;
                         _cameraZoom = 5.0f;
                         CameraClamp = new CameraClamp { MaxVerticalValue = -40.0f, MinVerticalValue = -3.0f };
                         _mainCamera.Shake(CameraShake.Hand, 0.5f);
-                        StartLerp(startValuePosition, startValueRotation);
+
+                        _mainCamera.StopPointing();
+                        _mainCamera.PointAt(lowTarget);
+                        StartLerp(lowCamPos, CutsceneManager.DirectionToRotation(lowTarget - lowCamPos));
+                        _justSwitched = true;
                     }
-                    else if (_internalCameraPosition == CameraPosition.Interior)
+                    else
                     {
                         RepositionFor((Vehicle)_target);
                     }
                     break;
+
                 case CameraPosition.Wheels:
                     Game.Player.Character.Opacity = 255;
                     RotationMode = CameraRotationMode.Around;
