@@ -64,6 +64,8 @@ namespace PremiumDeluxeRevamped
         private const float MinimumSafeCameraDepthOffset = 2.25f;
         private const float MinimumValidStoredCameraDistance = 1.5f;
         private const float MaximumValidStoredCameraDistance = 10.5f;
+        private const float MinimumVehicleViewerCameraHeightOffset = 0.30f;
+        private const float VehicleViewerFloorSafetyEpsilon = 0.02f;
 
         public WorkshopCamera()
         {
@@ -199,7 +201,7 @@ namespace PremiumDeluxeRevamped
                 return false;
             }
 
-            if (position.Z < target.Position.Z - 0.5f)
+            if (position.Z < target.Position.Z + MinimumVehicleViewerCameraHeightOffset - VehicleViewerFloorSafetyEpsilon)
             {
                 return false;
             }
@@ -226,6 +228,11 @@ namespace PremiumDeluxeRevamped
                 return false;
             }
 
+            if (MainCameraPosition == CameraPosition.Car && _mainCamera.Position.Z < _target.Position.Z + MinimumVehicleViewerCameraHeightOffset - VehicleViewerFloorSafetyEpsilon)
+            {
+                return false;
+            }
+
             if (_mainCamera.Position.Z < focus.Z - MinimumSafeCameraDepthOffset)
             {
                 return false;
@@ -242,23 +249,94 @@ namespace PremiumDeluxeRevamped
             }
 
             Vector3 focus = IsFiniteVector(_targetPos) ? _targetPos : _target.Position;
-            Vector3 backward = _target.ForwardVector * -1f;
-            if (!IsFiniteVector(backward) || backward.Length() < 0.001f)
+            Vector3 offset = _mainCamera.Position - focus;
+            float currentDistance = IsFiniteVector(offset) ? offset.Length() : 0.0f;
+            float safeZoom = Clamp(_cameraZoom > 0.01f ? _cameraZoom : currentDistance, 1.0f, 6.5f);
+
+            if (!IsFiniteVector(offset) || currentDistance < 0.001f)
             {
-                backward = Vector3.WorldSouth;
+                offset = _target.ForwardVector * -1f;
+                if (!IsFiniteVector(offset) || offset.Length() < 0.001f)
+                {
+                    offset = Vector3.WorldSouth;
+                }
+                currentDistance = offset.Length();
             }
 
-            float safeZoom = Clamp(_cameraZoom > 0.01f ? _cameraZoom : 5.0f, 1.0f, 6.5f);
-            Vector3 safePosition = focus + backward * safeZoom + Vector3.WorldUp * Math.Max(0.8f, safeZoom * 0.2f);
+            Vector3 safePosition = focus + offset * (safeZoom / currentDistance);
+
+            if (MainCameraPosition == CameraPosition.Car)
+            {
+                float minimumHeight = _target.Position.Z + MinimumVehicleViewerCameraHeightOffset;
+                if (safePosition.Z < minimumHeight)
+                {
+                    float verticalOffset = minimumHeight - focus.Z;
+                    Vector3 horizontalOffset = new Vector3(offset.X, offset.Y, 0f);
+                    float horizontalLength = horizontalOffset.Length();
+                    float horizontalDistance = (float)Math.Sqrt(Math.Max(0.0f, (safeZoom * safeZoom) - (verticalOffset * verticalOffset)));
+
+                    if (horizontalLength > 0.001f)
+                    {
+                        horizontalOffset *= horizontalDistance / horizontalLength;
+                    }
+                    else
+                    {
+                        horizontalOffset = _target.ForwardVector * -horizontalDistance;
+                    }
+
+                    safePosition = focus + horizontalOffset + Vector3.WorldUp * verticalOffset;
+                }
+            }
+            else if (safePosition.Z < focus.Z - MinimumSafeCameraDepthOffset)
+            {
+                safePosition.Z = focus.Z - MinimumSafeCameraDepthOffset;
+            }
 
             _mainCamera.StopPointing();
             _mainCamera.Position = safePosition;
             _mainCamera.PointAt(focus);
+        }
 
-            _isDragging = false;
-            _dragOffset = PointF.Empty;
+        private Vector3 ApplyVehicleViewerFloorConstraint(Vector3 currentPosition, Vector3 horizontalMovement, Vector3 verticalMovement, Vector3 zoomMovement)
+        {
+            Vector3 basePosition = currentPosition + horizontalMovement + zoomMovement;
+            Vector3 proposedPosition = basePosition + verticalMovement;
 
-            try { Function.Call((Hash)0x8DB8CFFD58B62552UL, 0); } catch { }
+            if (_target == null || !_target.Exists() || MainCameraPosition != CameraPosition.Car)
+            {
+                return proposedPosition;
+            }
+
+            float minimumHeight = _target.Position.Z + MinimumVehicleViewerCameraHeightOffset;
+
+            if (basePosition.Z < minimumHeight)
+            {
+                basePosition.Z = minimumHeight;
+                proposedPosition = basePosition + verticalMovement;
+            }
+
+            if (proposedPosition.Z >= minimumHeight)
+            {
+                return proposedPosition;
+            }
+
+            if (verticalMovement.Z < -0.0001f && basePosition.Z > minimumHeight)
+            {
+                float allowedFraction = (basePosition.Z - minimumHeight) / -verticalMovement.Z;
+                allowedFraction = Clamp(allowedFraction, 0.0f, 1.0f);
+                proposedPosition = basePosition + verticalMovement * allowedFraction;
+            }
+            else
+            {
+                proposedPosition = basePosition;
+            }
+
+            if (proposedPosition.Z < minimumHeight)
+            {
+                proposedPosition.Z = minimumHeight;
+            }
+
+            return proposedPosition;
         }
 
         private void EnsureCameraPoseIsSafe()
@@ -365,17 +443,18 @@ namespace PremiumDeluxeRevamped
                 mouseX = (mouseX * 2f) - 1f;
                 mouseY = (mouseY * 2f) - 1f;
 
-                Vector3 rotation = Vector3.Zero;
+                Vector3 horizontalMovement = Vector3.Zero;
+                Vector3 verticalMovement = Vector3.Zero;
                 if (!IsCameraClamped(true, mouseX - _dragOffset.X))
                 {
-                    rotation += right * 15f * (mouseX - _dragOffset.X);
+                    horizontalMovement = right * 15f * (mouseX - _dragOffset.X);
                 }
                 if (!IsCameraClamped(false, mouseY - _dragOffset.Y))
                 {
-                    rotation += up * -((mouseY - _dragOffset.Y) * 15f);
+                    verticalMovement = up * -((mouseY - _dragOffset.Y) * 15f);
                 }
-                rotation += dir * (len - CameraZoom);
-                _mainCamera.Position += rotation;
+                Vector3 zoomMovement = dir * (len - CameraZoom);
+                _mainCamera.Position = ApplyVehicleViewerFloorConstraint(_mainCamera.Position, horizontalMovement, verticalMovement, zoomMovement);
                 _dragOffset = new PointF(mouseX, mouseY);
             }
 
@@ -394,18 +473,19 @@ namespace PremiumDeluxeRevamped
 
                 float mouseX = Function.Call<float>(Hash.GET_CONTROL_NORMAL, 0, (int)Control.LookLeftRight);
                 float mouseY = Function.Call<float>(Hash.GET_CONTROL_NORMAL, 0, (int)Control.LookUpDown);
-                Vector3 rotation = Vector3.Zero;
+                Vector3 horizontalMovement = Vector3.Zero;
+                Vector3 verticalMovement = Vector3.Zero;
 
                 if (!IsCameraClamped(true, mouseX))
                 {
-                    rotation += right * mouseX * 0.6f;
+                    horizontalMovement = right * mouseX * 0.6f;
                 }
                 if (!IsCameraClamped(false, mouseY))
                 {
-                    rotation += up * -mouseY * 0.5f;
+                    verticalMovement = up * -mouseY * 0.5f;
                 }
-                rotation += dir * (len - CameraZoom);
-                _mainCamera.Position += rotation;
+                Vector3 zoomMovement = dir * (len - CameraZoom);
+                _mainCamera.Position = ApplyVehicleViewerFloorConstraint(_mainCamera.Position, horizontalMovement, verticalMovement, zoomMovement);
             }
         }
 
