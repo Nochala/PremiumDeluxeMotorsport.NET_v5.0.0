@@ -426,17 +426,7 @@ namespace PremiumDeluxeRevamped
             {
                 Helper.GP = Game.Player;
                 Helper.GPC = Game.Player.Character;
-                switch ((PedHash)Helper.GPC.Model.Hash)
-                {
-                    case PedHash.Michael:
-                    case PedHash.Franklin:
-                    case PedHash.Trevor:
-                        Helper.PlayerCash = Game.Player.Money;
-                        break;
-                    default:
-                        Helper.PlayerCash = 1999999999;
-                        break;
-                }
+                Helper.PlayerCash = Game.Player.Money;
 
                 Helper.PdmDoorDist = World.GetDistance(Helper.GPC.Position, Helper.PdmDoor);
                 HandlePdmCrimeState();

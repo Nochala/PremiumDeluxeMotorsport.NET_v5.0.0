@@ -15,6 +15,7 @@ namespace PremiumDeluxeRevamped
     public static class MenuHelper
     {
         public static NativeMenu MainMenu;
+
         public static NativeMenu ConfirmMenu;
         public static NativeMenu CustomiseMenu;
         public static NativeMenu VehicleMenu;
@@ -1082,10 +1083,19 @@ namespace PremiumDeluxeRevamped
                 {
                     return;
                 }
-                ShowOnly(MainMenu);
+
+                if (VehicleMenu != null && RegisteredMenus.Contains(VehicleMenu))
+                {
+                    ShowOnly(VehicleMenu);
+                    ResetSelection(VehicleMenu);
+                }
+                else
+                {
+                    ShowOnly(MainMenu);
+                }
+
                 ResetSelection(CustomiseMenu);
                 ResetSelection(ConfirmMenu);
-                ResetSelection(MainMenu);
             }
             catch (Exception ex)
             {
@@ -1252,6 +1262,8 @@ namespace PremiumDeluxeRevamped
 
             if (string.Equals(selectedFullVehicleName, Helper.VehicleName, StringComparison.OrdinalIgnoreCase))
             {
+                PreviewVehicleBasePrice = Math.Max(t.Item2, 0);
+                RefreshPreviewVehiclePrice();
                 ShowOnly(ConfirmMenu);
                 Helper.VehicleName = selectedFullVehicleName;
                 Helper.optLastVehMake = t.Item4;
@@ -1288,6 +1300,9 @@ namespace PremiumDeluxeRevamped
                 }
 
                 Helper.SelectedVehicle = t.Item3;
+                Helper.VehicleName = t.Item3;
+                PreviewVehicleBasePrice = Math.Max(t.Item2, 0);
+                Helper.VehiclePrice = PreviewVehicleBasePrice;
                 CleanupVehicleViewerArea();
                 Helper.VehPreview?.Delete();
                 if (sender.Items[index].Title.IndexOf("NULL", StringComparison.OrdinalIgnoreCase) < 0)
@@ -1471,11 +1486,13 @@ namespace PremiumDeluxeRevamped
                     viewerActionInProgress = true;
                     try
                     {
-                        if (Helper.PlayerCash > Helper.VehiclePrice)
+                        int currentCash = Game.Player.Money;
+                        Helper.PlayerCash = currentCash;
+                        if (currentCash >= Helper.VehiclePrice)
                         {
                             FadeOut(200);
                             Script.Wait(200);
-                            Helper.GP.Money = Helper.PlayerCash - Helper.VehiclePrice;
+                            Helper.GP.Money = currentCash - Helper.VehiclePrice;
                             HideAllMenus();
                             Helper.wsCamera.Stop();
                             Helper.DrawSpotLight = false;
@@ -1499,18 +1516,7 @@ namespace PremiumDeluxeRevamped
                         }
                         else
                         {
-                            if (Game.Player.Character.Name() == "Franklin")
-                            {
-                                Helper.DisplayNotificationThisFrame(Gxt("EMSTR_55"), string.Empty, Gxt("PI_BIK_HX8"), "CHAR_BANK_FLEECA", true, Helper.IconType.RightJumpingArrow);
-                            }
-                            else if (Game.Player.Character.Name() == "Trevor")
-                            {
-                                Helper.DisplayNotificationThisFrame(Gxt("EMSTR_58"), string.Empty, Gxt("PI_BIK_HX8"), "CHAR_BANK_BOL", true, Helper.IconType.RightJumpingArrow);
-                            }
-                            else
-                            {
-                                Helper.DisplayNotificationThisFrame(Gxt("EMSTR_52"), string.Empty, Gxt("PI_BIK_HX8"), "CHAR_BANK_MAZE", true, Helper.IconType.RightJumpingArrow);
-                            }
+                            Helper.DisplayNotificationThisFrame(Gxt("EMSTR_52"), string.Empty, Gxt("PI_BIK_HX8"), "CHAR_BANK_MAZE", true, Helper.IconType.RightJumpingArrow);
                         }
                     }
                     finally
